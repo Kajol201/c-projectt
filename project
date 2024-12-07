@@ -1,0 +1,376 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAX_FLIGHTS 100
+#define MAX_USERS 100
+#define MAX_TICKETS 100
+
+typedef struct {
+    char flight_no[10];
+    char flight_name[50];
+    char source[50];
+    char destination[50];
+    float cost;
+    char start_time[20];
+    int available_seats;
+    char seat_map[50][50]; // To track available seats
+} Flight;
+
+typedef struct {
+    char name[50];
+    char email[50];
+    char password[50];
+    int user_type;  // 1 for Admin, 2 for User
+} User;
+
+typedef struct {
+    char flight_no[10];
+    char seat_no[5];
+    char passenger_name[50];
+    char mobile_no[20];
+    char payment_method[20];
+    char payment_id[20];
+} Ticket;
+
+Flight flights[MAX_FLIGHTS];
+User users[MAX_USERS];
+Ticket tickets[MAX_TICKETS];
+
+int flight_count = 0;
+int user_count = 0;
+int ticket_count = 0;
+
+void save_data();
+void load_data();
+void admin_menu();
+void user_menu();
+void register_user();
+int login_user();
+void view_flights();
+void add_flight();
+void cancel_flight();
+void book_seat();
+void cancel_ticket();
+void view_ticket_details();
+void show_available_seats(int flight_index);
+
+int main() {
+    load_data();  // Load data from files at the beginning
+    int choice;
+
+    printf("Welcome to the Flight Reservation System\n");
+    while (1) {
+        printf("\n1. Register\n2. Login\n3. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                register_user();
+                break;
+            case 2:
+                if (login_user()) {
+                    int user_type;
+                    printf("Enter user type (1 for Admin, 2 for User): ");
+                    scanf("%d", &user_type);
+                    if (user_type == 1)
+                        admin_menu();
+                    else if (user_type == 2)
+                        user_menu();
+                    else
+                        printf("Invalid user type.\n");
+                }
+                break;
+            case 3:
+                save_data();  // Save data before exiting
+                printf("Goodbye!\n");
+                exit(0);
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
+
+void save_data() {
+    // Save flights data
+    FILE *f = fopen("flights.dat", "wb");
+    fwrite(&flights, sizeof(Flight), flight_count, f);
+    fclose(f);
+
+    // Save users data
+    f = fopen("users.dat", "wb");
+    fwrite(&users, sizeof(User), user_count, f);
+    fclose(f);
+
+    // Save tickets data
+    f = fopen("tickets.dat", "wb");
+    fwrite(&tickets, sizeof(Ticket), ticket_count, f);
+    fclose(f);
+}
+
+void load_data() {
+    FILE *f = fopen("flights.dat", "rb");
+    if (f != NULL) {
+        fread(&flights, sizeof(Flight), MAX_FLIGHTS, f);
+        fclose(f);
+    }
+
+    f = fopen("users.dat", "rb");
+    if (f != NULL) {
+        fread(&users, sizeof(User), MAX_USERS, f);
+        fclose(f);
+    }
+
+    f = fopen("tickets.dat", "rb");
+    if (f != NULL) {
+        fread(&tickets, sizeof(Ticket), MAX_TICKETS, f);
+        fclose(f);
+    }
+}
+
+void register_user() {
+    printf("Enter name: ");
+    scanf("%s", users[user_count].name);
+    printf("Enter email: ");
+    scanf("%s", users[user_count].email);
+    printf("Enter password: ");
+    scanf("%s", users[user_count].password);
+
+    printf("Enter user type (1 for Admin, 2 for User): ");
+    scanf("%d", &users[user_count].user_type);  // User type added during registration
+
+    user_count++;
+    printf("Registration successful!\n");
+    save_data();  // Save data after registration
+}
+
+int login_user() {
+    char email[50], password[50];
+    printf("Enter email: ");
+    scanf("%s", email);
+    printf("Enter password: ");
+    scanf("%s", password);
+
+    for (int i = 0; i < user_count; i++) {
+        if (strcmp(users[i].email, email) == 0 && strcmp(users[i].password, password) == 0) {
+            return 1;  // Login successful
+        }
+    }
+    printf("Invalid login details.\n");
+    return 0;
+}
+
+void admin_menu() {
+    int choice;
+    while (1) {
+        printf("\nAdmin Menu:\n");
+        printf("1. View flights\n2. Add flight\n3. Cancel flight\n4. View seat\n5. Logout\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                view_flights();
+                break;
+            case 2:
+                add_flight();
+                break;
+            case 3:
+                cancel_flight();
+                break;
+            case 4:
+                // View seat (passenger details)
+                break;
+            case 5:
+                return;
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
+
+void user_menu() {
+    int choice;
+    while (1) {
+        printf("\nUser Menu:\n");
+        printf("1. View flights\n2. Book seat\n3. Cancel ticket\n4. View ticket details\n5. Logout\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                view_flights();
+                break;
+            case 2:
+                book_seat();
+                break;
+            case 3:
+                cancel_ticket();
+                break;
+            case 4:
+                view_ticket_details();
+                break;
+            case 5:
+                return;
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
+
+void view_flights() {
+    printf("\nAvailable Flights:\n");
+    for (int i = 0; i < flight_count; i++) {
+        printf("Flight No: %s, Name: %s, Source: %s, Destination: %s, Cost: %.2f, Start Time: %s, Available Seats: %d\n",
+            flights[i].flight_no, flights[i].flight_name, flights[i].source, flights[i].destination,
+            flights[i].cost, flights[i].start_time, flights[i].available_seats);
+    }
+}
+
+void add_flight() {
+    printf("Enter flight number: ");
+    scanf("%s", flights[flight_count].flight_no);
+    printf("Enter flight name: ");
+    scanf("%s", flights[flight_count].flight_name);
+    printf("Enter source: ");
+    scanf("%s", flights[flight_count].source);
+    printf("Enter destination: ");
+    scanf("%s", flights[flight_count].destination);
+    printf("Enter cost: ");
+    scanf("%f", &flights[flight_count].cost);
+    printf("Enter start time: ");
+    scanf("%s", flights[flight_count].start_time);
+    flights[flight_count].available_seats = 50;  // Default seats
+
+    // Initialize seat map
+    for (int i = 0; i < 50; i++) {
+        sprintf(flights[flight_count].seat_map[i], "A%d", i + 1); // A1 to A50
+    }
+
+    flight_count++;
+    printf("Flight added successfully!\n");
+    save_data();  // Save data after adding a flight
+}
+
+void cancel_flight() {
+    char flight_no[10];
+    printf("Enter flight number to cancel: ");
+    scanf("%s", flight_no);
+
+    for (int i = 0; i < flight_count; i++) {
+        if (strcmp(flights[i].flight_no, flight_no) == 0) {
+            for (int j = i; j < flight_count - 1; j++) {
+                flights[j] = flights[j + 1];
+            }
+            flight_count--;
+            printf("Flight canceled successfully!\n");
+            save_data();  // Save data after canceling a flight
+            return;
+        }
+    }
+    printf("Flight not found.\n");
+}
+
+void show_available_seats(int flight_index) {
+    printf("Available Seats for Flight %s:\n", flights[flight_index].flight_no);
+    for (int i = 0; i < flights[flight_index].available_seats; i++) {
+        printf("%s ", flights[flight_index].seat_map[i]);
+    }
+    printf("\n");
+}
+
+void book_seat() {
+    char flight_no[10];
+    printf("Enter flight number: ");
+    scanf("%s", flight_no);
+
+    for (int i = 0; i < flight_count; i++) {
+        if (strcmp(flights[i].flight_no, flight_no) == 0) {
+            if (flights[i].available_seats == 0) {
+                printf("No seats available.\n");
+                return;
+            }
+            show_available_seats(i);
+
+            printf("Enter seat number: ");
+            char seat_no[5];
+            scanf("%s", seat_no);
+
+            printf("Enter passenger name: ");
+            char passenger_name[50];
+            scanf("%s", passenger_name);
+            printf("Enter passenger mobile number: ");
+            char mobile_no[20];
+            scanf("%s", mobile_no);
+            printf("Select payment method: 1. bkash 2. nagad 3. visa: ");
+            int payment_method;
+            scanf("%d", &payment_method);
+            printf("Enter payment ID: ");
+            char payment_id[20];
+            scanf("%s", payment_id);
+
+            // Book the seat
+            strcpy(tickets[ticket_count].flight_no, flight_no);
+            strcpy(tickets[ticket_count].seat_no, seat_no);
+            strcpy(tickets[ticket_count].passenger_name, passenger_name);
+            strcpy(tickets[ticket_count].mobile_no, mobile_no);
+            tickets[ticket_count].payment_method[0] = payment_method == 1 ? 'b' : payment_method == 2 ? 'n' : 'v';
+            strcpy(tickets[ticket_count].payment_id, payment_id);
+            ticket_count++;
+
+            flights[i].available_seats--;
+            printf("Seat booked successfully!\n");
+            save_data();  // Save data after booking a seat
+            return;
+        }
+    }
+    printf("Flight not found.\n");
+}
+
+void cancel_ticket() {
+    char seat_no[5];
+    printf("Enter seat number to cancel: ");
+    scanf("%s", seat_no);
+
+    for (int i = 0; i < ticket_count; i++) {
+        if (strcmp(tickets[i].seat_no, seat_no) == 0) {
+            for (int j = 0; j < flight_count; j++) {
+                if (strcmp(flights[j].flight_no, tickets[i].flight_no) == 0) {
+                    flights[j].available_seats++;
+                    printf("Seat %s on flight %s is now available.\n", tickets[i].seat_no, tickets[i].flight_no);
+
+                    for (int k = i; k < ticket_count - 1; k++) {
+                        tickets[k] = tickets[k + 1];
+                    }
+                    ticket_count--;
+                    printf("Ticket canceled successfully!\n");
+                    save_data();  // Save data after canceling a ticket
+                    return;
+                }
+            }
+        }
+    }
+    printf("Ticket not found.\n");
+}
+
+void view_ticket_details() {
+    char email[50];
+    printf("Enter your email to view tickets: ");
+    scanf("%s", email);
+
+    int found = 0;
+    printf("Your booked tickets:\n");
+    for (int i = 0; i < ticket_count; i++) {
+        if (strcmp(tickets[i].seat_no, email) == 0) {
+            printf("Ticket Details:\n");
+            printf("Flight No: %s, Seat No: %s, Passenger Name: %s, Mobile No: %s, Payment Method: %s, Payment ID: %s\n",
+                tickets[i].flight_no, tickets[i].seat_no, tickets[i].passenger_name, tickets[i].mobile_no,
+                tickets[i].payment_method, tickets[i].payment_id);
+            found = 1;
+        }
+    }
+    if (!found) {
+        printf("No tickets found for this email.\n");
+    }
+}
